@@ -6,7 +6,7 @@
 #'"ctl00$conteudo$$btnMes" downloads recorded crime count.
 #'
 #' @export
-get_summarized_table_sp <- function(year, city, type = "ctl00$conteudo$btnMensal"){
+get_summarized_table_sp <- function(year, city = "0", regioes = "0", dps = "0", type = "ctl00$conteudo$btnMensal"){
   url <- 'http://www.ssp.sp.gov.br/Estatistica/Pesquisa.aspx'
 
   pivot <- httr::GET(url)
@@ -20,18 +20,19 @@ get_summarized_table_sp <- function(year, city, type = "ctl00$conteudo$btnMensal
                  `__VIEWSTATE` = states$vs,
                  `__EVENTVALIDATION` = states$ev,
                  `ctl00$conteudo$ddlAnos` = year,
-                 `ctl00$conteudo$ddlRegioes` = "0",
+                 `ctl00$conteudo$ddlRegioes` = regioes,
                  `ctl00$conteudo$ddlMunicipios` = city,
-                 `ctl00$conteudo$ddlDelegacias` = "0")
+                 `ctl00$conteudo$ddlDelegacias` = dps)
 
   httr::POST(url, body = params, encode = 'form') %>%
     xml2::read_html() %>%
-    rvest::html_table() %>%
+    rvest::html_table(dec = ",") %>%
     dplyr::first() %>%
     #serve pra pegar apenas a primeira tabela da página, se houver mais do que uma. Estou assumindo que a tabela que eu quero é sempre a primeira.
     dplyr::mutate_at(.funs = parse_number_br, .vars = dplyr::vars(Jan:Total)) %>%
     dplyr::mutate(municipio = city,
-                  ano = year)
+                  ano = year,
+                  dp = dps)
 }
 
 #' Download detailed information publicized by São Paulo's Security Office
@@ -91,4 +92,25 @@ get_historical_summarized_table_sp <- function(y, c, ty){
               stringsAsFactors = F) %>%
     as.list() %>%
     purrr::pmap_df(get_summarized_table_sp)
+}
+
+lista_opcoes_de_dp <- function(){
+  url <- 'http://www.ssp.sp.gov.br/Estatistica/Pesquisa.aspx'
+
+  pivot <- httr::GET(url)
+
+  options <- pivot |>
+    xml2::read_html() |>
+    rvest::html_nodes("#conteudo_ddlDelegacias") |>
+    rvest::html_nodes("option")
+
+  valores <- options |>
+    rvest::html_attr("value")
+
+  nome_dp <- options |>
+    rvest::html_text()
+
+  names(valores) <- nome_dp
+
+  return(valores)
 }

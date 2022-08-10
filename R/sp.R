@@ -94,6 +94,7 @@ get_historical_summarized_table_sp <- function(y, c, ty){
     purrr::pmap_df(get_summarized_table_sp)
 }
 
+#' @export
 lista_opcoes_de_dp <- function(){
   url <- 'http://www.ssp.sp.gov.br/Estatistica/Pesquisa.aspx'
 
